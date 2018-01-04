@@ -43,6 +43,8 @@ express = {
                     this.port = port
                 end
                 this.tcpServer:listen(this.port,function(conn)
+                    
+                    
                     conn:on('receive',function(conn, rawRequest)
                         local req = {
                             app=this;
@@ -54,14 +56,15 @@ express = {
                         }
                         local res = {
                             app = this;
-                            sendRaw = function(this,rawRes)
-                                conn:send(rawRes)
+                            sendRaw = function(this,rawRes, cb)
+                                conn:send(rawRes, cb)
                             end;
-                            _headers = this.defaultHeaders;
+                            _headers = {};
                             statusCode = this.defaultStatusCode;
                             statusText = this.statusCodes[this.defaultStatusCode];
                             httpVersion = this.defaultHttpVersion;
                         }
+                        for k, v in pairs(this.defaultHeaders) do res._headers[k] = v end
                         
                         -- Call middleware callbacks 
                         local middlewareCallbacksMaster = {} -- all middlewares that need to be called
@@ -93,6 +96,7 @@ express = {
                             if this.routes[method] then
                                 for route, routeCallbacks in pairs(this.routes[method]) do
                                     if string.sub(req.url,1,string.len(route)) == route then -- if url matches route pattern
+                                        print("route call", req.method, route)
                                         for j = 1, #routeCallbacks do
                                             local routeCallback = routeCallbacks[j]
                                             routeCallback(req,res)
@@ -162,7 +166,7 @@ express = {
                 return this
             end
             -- Allow sending body (string or if supported table which get converted to json)i
-            res.send = function(this,body)
+            res.send = function(this,body,cb)
                 if type(body) == 'table' then
                     body = sjson.encode(body)
                     this:set('Content-Type', 'application/json')
@@ -180,7 +184,7 @@ express = {
                                 
                 rawResponse = rawResponse .. '\r\n' .. body
                 
-                this:sendRaw(rawResponse)
+                this:sendRaw(rawResponse,cb)
             end
             -- Dedicated function for json body
             res.json = function(this,table)
@@ -199,7 +203,7 @@ express = {
             basePath = string.sub(basePath,2) -- remove leading '/'
         end
 
-        local middleware = function(req,res,next)
+        local middleware = function(req,res)
             local fileToServePath = basePath
             if not file.exists(basePath) then
                 local urlLen = string.len(req.url)
@@ -210,12 +214,21 @@ express = {
             if file.exists(fileToServePath) then
                 local fileToServe = file.open(fileToServePath, 'r')
                 if fileToServe then
-                    res:send(fileToServe:read())
-                    fileToServe:close()
-                    fileToServe = nil
+
+                    res:set('Content-Length', file.stat(fileToServePath)['size'])
+
+                    local nextBlock = function()
+                        local buffer=fileToServe:read()
+                        if buffer then 
+                            res:sendRaw(buffer, nextBlock)
+                        else
+                            fileToServe:close()
+                        end
+                    end
+
+                    res:send(fileToServe:read(), nextBlock)
                 end
             end
-            next()
         end
         
         return middleware

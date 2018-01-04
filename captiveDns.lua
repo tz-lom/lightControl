@@ -35,7 +35,7 @@ dns:on("receive",function(s,c, port, resp_ip)
     if q_type == unhex("00 01") then 
         --print("Got a type A query "..query)
         local class = string.sub(c,j,j+1)
-        --ip = "192.168.4.1"
+        --ip = "192.168.100.1"
         local ip=unhex("C0 A8 64 01")
         local answers = unhex("00 01")
         local flags = unhex("81 80")

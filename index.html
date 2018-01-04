@@ -1,49 +1,116 @@
 <!DOCTYPE html>
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+<label>SSID:<input id="ssid"></label><br>
+<label>PWD:<input id="password" type="password"></label><br>
+
+
 <svg width="200" height=200 class="pointInfo"></svg>
-<input type="time" id="addTime"><button onClick="addPointWrap()">Add point</button>
-<button>Remove point</button>
+<input type="time" id="addTime" value="12:00"><button onClick="addPointWrap()">Add point</button>
+<button onClick="removePointWrap()">Remove point</button>
 <svg width="500" height="500" class="timePlot"></svg>
-<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="/d3.v4.min.js.gz"></script>
 <style>
     .active circle { fill: red }
 </style>
 <script>
 
+var maxChannel = 5;
+var configCache;
 
-var data = [
-    {
-        id: 0,
-        time:0,
-        power: 10
-    },
-/*    {
-        id: 1,
-        time: 60*10,
-        power: 40
-    },
-    {
-        id: 2,
-        time: 60*18+15,
-        power: 100
-    },
-    {
-        id: 3,
-        time: 60*22,
-        power: 30
-    },*/
-    {
-        id: 1,
-        time: 60*23+59,
-        power: 10
+
+function loadSettings(){
+    d3.json('/settings.lua', function(json){
+        document.getElementById('ssid').value = json.ssid;
+        document.getElementById('password').value = json.password;
+        maxChannel = json.maxChannel
+
+        var p = json.levels.map(function(x, i){
+            x.id = i+1;
+            x.channels = x.c.map(function(c){
+                return {
+                    value: Math.round(c*100/x.power*100/4096)
+                }
+            })
+            return x;
+        })
+        p.unshift({id: 0, time:0, power: p[p.length-1].power, channels: p[p.length-1].channels})
+
+        points = p;
+        currentPoint = points.length - 1;
+
+        configCache = buildSave()
+
+        rebuildPlot()
+        updatePointInfo()
+
+        saveSettings()
+    })
+}
+
+function buildSave(){
+    var levels = points.map(function(x){
+        return {
+            time: Math.min(23*60+59, Math.max(0, Math.round(x.time))),
+            power: Math.min(100, Math.max(0, Math.round(x.power))),
+            c: x.channels.map(function(c){
+                return Math.min(4096, Math.max(0, Math.round(c.value*4096/100*x.power/100)));
+            })
+        }
+    })
+
+    levels.shift()
+
+    var obj = {
+        ssid: document.getElementById('ssid').value,
+        password: document.getElementById('password').value,
+        levels: levels
     }
-]
+
+    return JSON.stringify(obj);
+}
+
+function saveSettings(){
+    var n = buildSave();
+
+    if( n != configCache) {
+        d3.request("/settings.lua")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Content-Type", "application/json")
+            .on("load", function(xhr) {
+                configCache = n
+                setTimeout(saveSettings, 1000)
+            })
+            .on("error", function(){
+                setTimeout(saveSettings, 1000)
+            })
+            .post(n)
+
+    } else {
+        setTimeout(saveSettings, 1000)
+    }
+}
+
+
 var svg = d3.select("svg.timePlot"),
-    margin = {top: 20, right: 80, bottom: 30, left: 50},
+    margin = {top: 20, right: 100, bottom: 30, left: 50},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom;
 
 
-let points = data;
+var points = [
+    {
+        id: 0,
+        time:0,
+        power: 10,
+        channels: [{value:10}, {value:3}, {value:100}, {value:40}, {value:60}]
+    },
+    {
+        id: 1,
+        time: 60*23+59,
+        power: 10,
+        channels: [{value:0}, {value:30}, {value:100}, {value:40}, {value:60}]
+    }
+];
 
 
 var x = d3.scaleTime()
@@ -94,7 +161,10 @@ focus.append("path")
 
 function rebuildPlot() {
 
-    focus.select('path').attr('d', line);
+    focus.selectAll('g.point').remove()
+
+
+    focus.select('path').datum(points).attr('d', line);
 
     var circleGroup = focus.selectAll('g.point')
         .data(points)
@@ -140,6 +210,8 @@ focus.append('g')
 
 function dragstarted(d) {
     d3.select(this).raise().classed('active', true);
+    currentPoint = d.id;
+    updatePointInfo()
 }
 
 function dragged(d) {
@@ -155,13 +227,13 @@ function dragged(d) {
     if(newPower<0) newPower = 0;
     if(newPower>100) newPower = 100;
 
-    if(d.id !== data.length-1) {
+    if(d.id !== points.length-1) {
 
         if(d.id>0) {
-            if (newTime <= data[d.id-1].time) newTime = data[d.id-1].time + 1
+            if (newTime <= points[d.id-1].time) newTime = points[d.id-1].time + 1
         }
-        if(d.id<data.length-1) {
-            if (newTime>= data[d.id+1].time) newTime = data[d.id+1].time-1
+        if(d.id<points.length-1) {
+            if (newTime>= points[d.id+1].time) newTime = points[d.id+1].time-1
         }
 
         d.time = newTime;
@@ -171,7 +243,7 @@ function dragged(d) {
 
     } else {
         d.power = newPower;
-        data[0].power = newPower;
+        points[0].power = newPower;
     }
 
     d3.select(this)
@@ -190,24 +262,31 @@ function dragended(d) {
 function addPoint(time){
     if(time<=0 || time >= 60*23+59) return;
 
-    for(var i=0; i<data.length; ++i) {
-        if(data[i].time === time) {
+    for(var i=0; i<points.length; ++i) {
+        if(points[i].time === time) {
             time++;
             continue;
         }
-        if(data[i].time > time){
-            data.splice(i, 0, { time: time, power: 50 } )
+        if(points[i].time > time){
+            points.splice(i, 0, { time: time, power: 50, channels: Array(maxChannel).fill(1).map(function(){ return { value:50 }}) } )
             break;
         }
 
     }
-    data.forEach(function(n, i) { n.id = i })
-
-
-    focus.selectAll('g.point').remove()
+    points.forEach(function(n, i) { n.id = i })
 
     rebuildPlot()
+    updatePointInfo()
+}
 
+function removePoint( id ){
+    if(id<=0 || id>=points.length-1) return;
+
+    points.splice(id, 1)
+    points.forEach(function(n, i) { n.id = i })
+
+    rebuildPlot()
+    updatePointInfo()
 }
 
 
@@ -215,12 +294,18 @@ function addPointWrap(){
     addPoint(document.getElementById('addTime').valueAsNumber/60000)
 }
 
+function removePointWrap(){
+    removePoint(currentPoint)
+}
+
 var currentPoint = points.length-1;
+
+var updatePointInfo;
 
 function buildPointInfoPlot() {
     var svg = d3.select("svg.pointInfo")
 
-    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+    var margin = {top: 20, right: 20, bottom: 20, left: 50},
         width = +svg.attr("width") - margin.left - margin.right,
         height = +svg.attr("height") - margin.top - margin.bottom;
 
@@ -236,14 +321,65 @@ function buildPointInfoPlot() {
 
     focus.append("g").call(powerAxis)
 
-    var loScale
+    var loScale = d3.scaleLinear()
+        .domain([0, maxChannel])
+        .rangeRound([0, width])
+
+    updatePointInfo = function(){
+
+        //focus.selectAll("line").remove();
+        //focus.selectAll("circle").remove();
+
+        var l = focus.selectAll("line.vert")
+            .data(points[currentPoint].channels)
+
+        l
+            .enter()
+                .append("line")
+                .classed("vert", true)
+                .attr("stroke-dasharray", "5,5")
+                .attr("stroke", "#0074D9")
+                .attr("x1", function(d,i){ return loScale(i+1) })
+                .attr("y1", powerScale(0))
+                .attr("x2", function(d,i){ return loScale(i+1) })
+            .merge(l)
+                .attr("y2", function(d){ return powerScale(d.value) })
+
+        var c = focus.selectAll("circle.vert")
+            .data(points[currentPoint].channels)
+
+        c
+            .enter()
+                .append("circle")
+                .classed("vert", true)
+                .attr("cx", function(d,i){ return loScale(i+1) })
+                .attr("r", 5)
+                .style('fill', 'steelblue')
+                .call(d3.drag()
+                    .on('drag', function(d){
+                        var newPower = powerScale.invert(d3.event.y);
+                        if(newPower<0) newPower = 0;
+                        if(newPower>100) newPower = 100;
+
+                        d.value = newPower
+
+                        updatePointInfo();
+                    })
+                )
+            .merge(c)
+                .attr("cy", function(d){ return powerScale(d.value) })
+
+
+        //.attr("cy", function(d){ return powerScale(d.value) })
+    }
+
+    updatePointInfo()
 }
 
-function updatePointInfo(){
-    var svg = d3.select("svg.pointInfo");
-    svg.selectAll("circle").attr("cx")
-}
 
-buildPointInfoPlot()
+buildPointInfoPlot();
+
+
+loadSettings()
 
 </script>

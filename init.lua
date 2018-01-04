@@ -1,4 +1,5 @@
-dofile("settings.lua")
+dofile("compile.lua")
+dofile("settings-init.lua")
 captive = false;
 
 function startAP()
@@ -27,29 +28,31 @@ function startAP()
     wifi.ap.dhcp.start()
 
     collectgarbage()
-    dofile("captiveDns.lua")
+    --dofile("captiveDns.lua")
     collectgarbage()
-    dofile("webserver.lua")
+    --dofile("webserver.lua")
+    dofile("httpserver.lc")(80)
 end
 
---[[
-if settings.ssid then
+---[[
+if settings.ssid~="" then
     wifi.setmode(wifi.STATION)
-    wifi.sta.config(settings.ssid, settings.password)
+    wifi.sta.config({ssid=settings.ssid, pwd=settings.password})
     wifi.sta.autoconnect(1)
     wifi.sta.sethostname("lightController")
 
     wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(t)
-        dofile("webserver.lua")
+        dofile("httpserver.lc")(80)
     end)
 
     tmr.alarm(1,60000, tmr.ALARM_SINGLE, function() 
-        wifi.eventmon.deregister(wifi.eventmon.STA_CONNECTED)
+        wifi.eventmon.unregister(wifi.eventmon.STA_CONNECTED)
         if wifi.sta.getip()==nil then 
             startAP()
         end
     end)
 else
+    print("Starting setup access point")
     startAP()
 end
 --]]

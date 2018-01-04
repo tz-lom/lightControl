@@ -1,27 +1,18 @@
-settings = {
-  levels = {
-    {
-      time = 0,
-      c1 = 100,
-      c2 = 100,
-      c3 = 100,
-      c4 = 100
-    }
-  }
-}
-
-function loadSettings()
-    if file.open("settings.json") then
-        local dec = sjson.decoder()
-        
-        for str in file.read() do
-            dec:write(str)
-        end
-
-        settings = dec:result()
-       
+return function(connection, req, args)
+   if req.method == "GET" then
+      dofile("httpserver-header.lc")(connection, 200, 'json')
+      connection:send(sjson.encode(settings))
+   elseif req.method == "POST" then
+      dofile("httpserver-header.lc")(connection, 200, 'html')
+      local data = req.getRequestData()
+      
+      if file.open("settings.json", "w") then
+        print("saving:", data)
+        file.write(data)
         file.close()
+        loadSettings()
     end
+   else
+      connection:send("ERROR WTF req.method is ", req.method)
+   end
 end
-
-loadSettings()

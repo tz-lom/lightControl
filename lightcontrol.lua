@@ -5,12 +5,11 @@ pca:init(1, 2)
 pca:setMode1(0x01)
 pca:setMode2(0x04)
 
-cron.schedule("* * * * *", function(e)
+lightTimer = tmr.create()
+lightTimer:register(1000, tmr.ALARM_AUTO, function()
     collectgarbage()
-    local ts = rtctime.epoch2cal(rtctime.get())
-
-    local now = ts["hour"]*ts["min"]
-
+    local now = getTime()
+    
     for i,cur in settings.levels do
         if cur.time>now then
             local prev
@@ -19,16 +18,21 @@ cron.schedule("* * * * *", function(e)
             else
                 prev = settings.levels[i-1]
             end
-
-            pca:setOnOff(0, 0, map(now, prev.time, cur.time, prev.c1, cur.c1))
-            pca:setOnOff(1, 0, map(now, prev.time, cur.time, prev.c2, cur.c2))
-            pca:setOnOff(2, 0, map(now, prev.time, cur.time, prev.c3, cur.c3))
-            pca:setOnOff(3, 0, map(now, prev.time, cur.time, prev.c4, cur.c4))
+    
+            for i=1,settings.maxChannel do
+                pca:setOnOff(i, 0, map(now, prev.time, cur.time, prev.c[i], cur.c[i]))
+            end
             
         end
     end
-  
 end)
+lightTimer:start()
+
+
+function getTime()
+    local ts = rtctime.epoch2cal(rtctime.get())
+    return ts["hour"]*ts["min"]
+end
 
 function map(now, tBeg, tEnd, from, to)
     return from + (to-from)*(now-tBeg)/(tEnd-tBeg)
