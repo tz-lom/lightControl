@@ -1,0 +1,1 @@
+./esptool.py --port /dev/cu.wchusbserialfa130 write_flash -fm qio 0x00000 ../lightControl/firmware/nodemcu_integer.bin
