@@ -1,5 +1,6 @@
 dofile("compile.lua")
 dofile("settings-init.lua")
+dofile("lightcontrol.lc")
 captive = false;
 
 function startAP()

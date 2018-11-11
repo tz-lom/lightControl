@@ -30,7 +30,8 @@ local serverFiles = {
    'httpserver-request.lua',
    'httpserver-static.lua',
    'httpserver-wifi.lua',
-   'pca9685.lua'
+   'pca9685.lua',
+   'lightcontrol.lua'
 }
 
 local httpFiles = {
