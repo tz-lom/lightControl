@@ -9,7 +9,8 @@ lightTimer = tmr.create()
 lightTimer:register(4000, tmr.ALARM_AUTO, function()
     collectgarbage()
     local now = getTime()
-    
+
+
     for i,cur in pairs(settings.levels) do
         if cur.time>now then
             local prev
@@ -18,6 +19,8 @@ lightTimer:register(4000, tmr.ALARM_AUTO, function()
             else
                 prev = settings.levels[i-1]
             end
+
+    print("set")
     
             for i=1,settings.maxChannel do
                 if prev.time==cur.time then
