@@ -80,7 +80,7 @@ function saveSettings(){
         var now = new Date();
         m.time = [now.getHours(), now.getMinutes(), now.getSeconds()];
         
-        d3.request("/settings")
+        d3.request("/settings/save")
             .header("X-Requested-With", "XMLHttpRequest")
             .header("Content-Type", "application/json")
             .on("load", function(xhr) {

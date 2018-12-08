@@ -78,7 +78,7 @@ String getConfigAsJson()
   JsonObject& root = jsonBuffer.createObject();
   root["ssid"] = config.wifiSSID;
   root["password"] = config.wifiPassword;
-  root["maxChannels"] = channelsCount;
+  root["maxChannel"] = channelsCount;
   JsonArray& levels = root.createNestedArray("levels");
   for(auto& levelData: config.levels)
   {
