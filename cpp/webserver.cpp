@@ -37,7 +37,7 @@ void setup()
     server.send(200, "application/json", Settings::getConfigAsJson());
   });
 
-  server.on("/settings", HTTP_POST, [](){
+  server.on("/settings/save", HTTP_POST, [](){
     Settings::setConfigFromJson(server.arg("plain"));
     Settings::save();
     server.send(200, "text/html", "OK");

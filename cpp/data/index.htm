@@ -10,7 +10,9 @@
 <svg width="500" height="500" class="timePlot"></svg>
 <script src="/d3.v4.min.js"></script>
 <style>
-    .active circle { fill: red }
+    g.point circle { fill: steelblue; }
+    g.point.active circle { fill: red }
+    
 </style>
 <script>
 
@@ -190,7 +192,7 @@ function rebuildPlot() {
         .append('circle')
         .attr('r', 5.0)
         .style('cursor', 'move')
-        .style('fill', 'steelblue')
+        //.style('fill', 'steelblue')
 
     circleGroup
         .append('text')
@@ -216,6 +218,7 @@ focus.append('g')
     .call(yAxis);
 
 function dragstarted(d) {
+    d3.select('g.active').classed('active', false);
     d3.select(this).raise().classed('active', true);
     currentPoint = d.id;
     updatePointInfo()
@@ -262,7 +265,6 @@ function dragged(d) {
 }
 
 function dragended(d) {
-    d3.select(this).classed('active', false);
 }
 
 
