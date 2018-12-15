@@ -15,6 +15,8 @@ namespace Settings
   void setup();
   
   bool isWiFiAPmode();
+  String getSSID();
+  String getPassword();
 
   void save();
 
@@ -25,4 +27,3 @@ namespace Settings
 
   
 }
-

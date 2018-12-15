@@ -10,14 +10,10 @@ namespace LightControl {
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 int timer = 0;
-const int timeout = 500; 
+const int timeout = 5000; 
 
 void setup()
 {
-  //set I2C
-  Wire.begin(D1,D2);
-  Wire.setClock(100000);
-
   pwm.begin();
   pwm.setPWMFreq(1000);
 }
@@ -68,4 +64,3 @@ void loop()
 }
   
 }
-

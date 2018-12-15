@@ -5,6 +5,7 @@
 #include "termometer.h"
 #include "lightcontrol.h"
 #include <FS.h>
+#include <Wire.h>
 
 void initializeAP()
 {
@@ -26,10 +27,16 @@ void setup()
   SPIFFS.begin();
   Serial.begin(115200);
   Serial.println();
+  //set I2C
+  Wire.begin(D1,D2);
+  Wire.setClock(100000);
+  
   Settings::setup();
   RTC::setup();
   Termometer::setup();
   WebServer::setup();
+  LightControl::setup();
+
 
 
   if(Settings::isWiFiAPmode())
@@ -40,7 +47,19 @@ void setup()
   {
     // connect as client
     Serial.println("Connecting to WiFi...");
-    //WiFi.
+    WiFi.mode(WIFI_STA);
+    Serial.println(WiFi.begin(Settings::getSSID().c_str(), Settings::getPassword().c_str()) ? "OK" : "FAIL");
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    WiFi.hostname("lightController");
   }
 }
 

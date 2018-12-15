@@ -21,6 +21,16 @@ bool isWiFiAPmode()
   return config.wifiSSID=="";
 }
 
+String getSSID()
+{
+  return config.wifiSSID;
+}
+
+String getPassword()
+{
+  return config.wifiPassword;
+}
+
 void load();
 
 void setup()
@@ -84,7 +94,7 @@ String getConfigAsJson()
   JsonObject& root = jsonBuffer.createObject();
   root["ssid"] = config.wifiSSID;
   root["password"] = config.wifiPassword;
-  root["maxChannels"] = channelsCount;
+  root["maxChannel"] = channelsCount;
   JsonArray& levels = root.createNestedArray("levels");
   for(auto& levelData: config.levels)
   {
@@ -108,4 +118,3 @@ std::vector<powerPoint> getLevels()
 }
 
 }
-

@@ -16,6 +16,9 @@ namespace RTC
     Clock.setHour(hour);
     Clock.setMinute(minute);
     Clock.setSecond(second);
+    Clock.setDate(1);
+    Clock.setMonth(1);
+    Clock.setYear(2019);
   }
   
   int getMinutes()
@@ -25,4 +28,3 @@ namespace RTC
   }
 
 }
-
