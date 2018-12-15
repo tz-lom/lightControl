@@ -9,6 +9,9 @@ namespace Termometer
   OneWire oneWire(D3);
   DallasTemperature termosensor(&oneWire);
 
+  int timer = 0;
+  const int timeout = 500; 
+
   
   void setup()
   {
@@ -18,6 +21,9 @@ namespace Termometer
 
   void loop()
   {
+    if(timer-- > 0) return;
+    timer = timeout;
+  
     termosensor.requestTemperatures();
     termosensor.getTempCByIndex(0);
   }

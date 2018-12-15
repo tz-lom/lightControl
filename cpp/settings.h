@@ -21,6 +21,8 @@ namespace Settings
   void setConfigFromJson(const String& json);
   String getConfigAsJson();
 
+  std::vector<powerPoint> getLevels();
+
   
 }
 

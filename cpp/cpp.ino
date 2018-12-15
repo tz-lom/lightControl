@@ -1,6 +1,9 @@
 #include <ESP8266WiFi.h>
 #include "settings.h"
 #include "webserver.h"
+#include "rtc.h"
+#include "termometer.h"
+#include "lightcontrol.h"
 #include <FS.h>
 
 void initializeAP()
@@ -24,6 +27,10 @@ void setup()
   Serial.begin(115200);
   Serial.println();
   Settings::setup();
+  RTC::setup();
+  Termometer::setup();
+  WebServer::setup();
+
 
   if(Settings::isWiFiAPmode())
   {
@@ -35,11 +42,11 @@ void setup()
     Serial.println("Connecting to WiFi...");
     //WiFi.
   }
-
-  WebServer::setup();
 }
 
 void loop()
 {
   WebServer::loop();
+  LightControl::loop();
+  Termometer::loop();
 }

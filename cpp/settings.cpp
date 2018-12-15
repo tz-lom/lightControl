@@ -2,7 +2,7 @@
 #include <FS.h>
 #include <ArduinoJson.h>
 #include <algorithm>
-
+#include "rtc.h"
 
 namespace Settings {
 
@@ -18,7 +18,7 @@ Config config;
 
 bool isWiFiAPmode()
 {
-  return true;
+  return config.wifiSSID=="";
 }
 
 void load();
@@ -69,6 +69,12 @@ void setConfigFromJson(const String& json)
     }
     config.levels.push_back(point);
   }
+
+  JsonArray &time = root["time"];
+  if(time.size()==3)
+  {
+    RTC::setTime(time[0], time[1], time[2]);
+  }
   
 }
 
@@ -78,7 +84,7 @@ String getConfigAsJson()
   JsonObject& root = jsonBuffer.createObject();
   root["ssid"] = config.wifiSSID;
   root["password"] = config.wifiPassword;
-  root["maxChannel"] = channelsCount;
+  root["maxChannels"] = channelsCount;
   JsonArray& levels = root.createNestedArray("levels");
   for(auto& levelData: config.levels)
   {
@@ -94,6 +100,11 @@ String getConfigAsJson()
   String json;
   root.printTo(json);
   return json;
+}
+
+std::vector<powerPoint> getLevels()
+{
+  return config.levels;
 }
 
 }
