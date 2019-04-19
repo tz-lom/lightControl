@@ -10,7 +10,7 @@ namespace Termometer
   DallasTemperature termosensor(&oneWire);
 
   int timer = 0;
-  const int timeout = 500; 
+  const int timeout = 50000; 
 
   
   void setup()
