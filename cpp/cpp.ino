@@ -46,7 +46,10 @@ void setup()
   else
   {
     // connect as client
-    Serial.println("Connecting to WiFi...");
+    Serial.print("Connecting to WiFi ");
+    Serial.print(Settings::getSSID().c_str());
+    Serial.print(" : ");
+    Serial.println(Settings::getPassword().c_str());
     WiFi.mode(WIFI_STA);
     Serial.println(WiFi.begin(Settings::getSSID().c_str(), Settings::getPassword().c_str()) ? "OK" : "FAIL");
 
@@ -54,6 +57,8 @@ void setup()
     {
       delay(500);
       Serial.print(".");
+
+      loop();
     }
     Serial.println("");
     Serial.println("WiFi connected");

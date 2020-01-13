@@ -16,12 +16,24 @@ case '/settings':
           'time'=>1439,
           'power'=>50,
           'c' => [ 2048, 2048, 2048, 2048, 2048]
+        ],
+        'override' => [
+          'channels' => [
+            'enabled' => false,
+            'values' => [32, 64, 128, 256, 512]
+          ]
         ]
       ]
     ]);
-    $x = file_get_contents('settings.json');
+    $x = @file_get_contents('settings.json');
     if($x) $settings = $x;
     echo $settings;
+    break;
+case '/status':
+    echo json_encode([
+        'temperature' => 20,
+        'channels' => [40, 150, 1200, 1024]
+                     ]);
     break;
 default:
     return false;

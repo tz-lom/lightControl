@@ -3,6 +3,7 @@
 #include <FS.h>
 #include <functional>
 #include "settings.h"
+#include "status.h"
 
 namespace WebServer {
 ESP8266WebServer server(80);
@@ -41,6 +42,10 @@ void setup()
     Settings::setConfigFromJson(server.arg("plain"));
     Settings::save();
     server.send(200, "text/html", "OK");
+  });
+
+  server.on("/status", HTTP_GET, [](){
+    server.send(200, "application/json", Status::getStatus());
   });
 
   server.begin();

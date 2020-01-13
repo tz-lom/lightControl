@@ -12,6 +12,10 @@ public:
   String wifiPassword;
 
   std::vector<powerPoint> levels;
+
+  bool isOverrideChannels;
+  std::array<int, channelsCount> overrideChannels;
+
 };
 
 Config config;
@@ -38,6 +42,7 @@ void setup()
   config.wifiSSID = "";
   config.wifiPassword = "";
   config.levels.push_back({23*60+59, 50, { 2048, 2048, 2048, 2048, 2048 }});
+  config.isOverrideChannels = false;
   load();
 }
 
@@ -85,6 +90,17 @@ void setConfigFromJson(const String& json)
   {
     RTC::setTime(time[0], time[1], time[2]);
   }
+
+  JsonObject &override = root["override"];
+  JsonObject &overrideChannels = override["channels"];
+
+
+  config.isOverrideChannels = overrideChannels["enabled"];
+  JsonArray &overrideValues = overrideChannels["values"];
+  for(int i=0; i<std::min(channelsCount, (int)overrideValues.size()); ++i)
+  {
+    config.overrideChannels[i] = overrideValues[i];
+  }
   
 }
 
@@ -107,6 +123,15 @@ String getConfigAsJson()
       channels.add(levelData.channels[i]);
     }
   }
+
+  JsonObject& override_channels = root.createNestedObject("override").createNestedObject("channels");
+  override_channels["enabled"] = config.isOverrideChannels;
+  JsonArray& overrideValues = override_channels.createNestedArray("values");
+  for(auto c : config.overrideChannels)
+  {
+    overrideValues.add(c);
+  }
+  
   String json;
   root.printTo(json);
   return json;
@@ -116,5 +141,16 @@ std::vector<powerPoint> getLevels()
 {
   return config.levels;
 }
+
+bool isOverrideChannels()
+{
+  return config.isOverrideChannels;
+}
+
+std::array<int, channelsCount> getOverrideChannels()
+{
+  return config.overrideChannels;
+}
+
 
 }

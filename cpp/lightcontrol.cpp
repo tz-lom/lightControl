@@ -4,18 +4,39 @@
 #include <Adafruit_PWMServoDriver.h>
 #include "settings.h"
 #include "rtc.h"
+#include "status.h"
 
 namespace LightControl {
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 int timer = 0;
-const int timeout = 5000; 
+const int timeout = 5000;
+
+std::array<uint16_t, Settings::channelsCount> current_channels;
+
+void setPWM(uint8_t channel, uint16_t off_time)
+{
+  current_channels[channel] = off_time;
+  pwm.setPWM(channel, 0, off_time);
+}
+
+
+
+void reportStatus(JsonObject &root)
+{
+  JsonArray& channels = root.createNestedArray("channels");
+  for(auto ch: current_channels)
+  {
+    channels.add(ch);
+  }
+}
 
 void setup()
 {
   pwm.begin();
-  pwm.setPWMFreq(1000);
+  pwm.setPWMFreq(200);
+  Status::registerStatusReporter(reportStatus);
 }
 
 
@@ -35,16 +56,26 @@ void loop()
 {
   if(timer-- > 0) return;
   timer = timeout;
-  
-  int now = RTC::getMinutes();
+
+  if(Settings::isOverrideChannels())
+  {
+    const auto &channels = Settings::getOverrideChannels();
+    for(int i=0; i<Settings::channelsCount; ++i)
+    {
+       setPWM(i, channels[i]);
+    }
+    return;
+  }
+  int now = RTC::getSeconds();
 
   Serial.printf("time=%i\n", now);
 
   
   auto settings = Settings::getLevels();
+  Serial.println(settings.size());
   for(auto point=settings.begin(); point!=settings.end(); ++point)
   {
-    if(point->time>now)
+    if(point->time*60 > now)
     {
       auto prev = settings.end()-1;
       if(point != settings.begin())
@@ -54,8 +85,8 @@ void loop()
 
       for(int i=0; i<Settings::channelsCount; ++i)
       {
-        auto val = map(now, prev->time, point->time, prev->channels[i], point->channels[i]);
-        pwm.setPWM(i, 0, val);
+        auto val = map(now, prev->time*60, point->time*60, prev->channels[i], point->channels[i]);
+        setPWM(i, val);
         Serial.printf("set %i, %i\n", i, val);
       }
       break;

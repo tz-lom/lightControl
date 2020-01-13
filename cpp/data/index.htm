@@ -1,13 +1,25 @@
 <!DOCTYPE html>
 <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
-<label>SSID:<input id="ssid"></label><br>
-<label>PWD:<input id="password" type="password"></label><br>
+<table style="width:95vw; height:95vh">
+    <tr>
+        <td width="100">
+            <label>SSID:<input id="ssid"></label><br>
+            <label>PWD:<input id="password" type="password"></label><br>
+            <svg width="200" height=200 class="pointInfo"></svg>
+            Monitoring:<br/>
+            temperature: <span id="temperature">0</span><br/>
+            <label>Channels override<input type="checkbox" id="channels_override" onchange="updateOverrideValues()"></label><br/>
+            <svg width="200" height="200" class="override_values"></svg>
+        </td>
+        <td>
+            <input type="time" id="addTime" value="12:00"/>
+            <button onClick="addPointWrap()">Add point</button>
+            <button onClick="removePointWrap()">Remove point</button>
+            <svg height="100%" width="100%" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid" class="timePlot"></svg>
 
-
-<svg width="200" height=200 class="pointInfo"></svg>
-<input type="time" id="addTime" value="12:00"><button onClick="addPointWrap()">Add point</button>
-<button onClick="removePointWrap()">Remove point</button>
-<svg width="500" height="500" class="timePlot"></svg>
+        </td>
+    </tr>
+</table>
 <script src="/d3.v4.min.js"></script>
 <style>
     g.point circle { fill: steelblue; }
@@ -19,6 +31,11 @@
 var maxChannel = 5;
 var maxPower = 4095;
 var configCache;
+
+var status_report = {
+    temperature : 10,
+    channels: [{value:0}, {value:0}, {value:10} ,{value:2048}, {value:1}]
+};
 
 
 function loadSettings(){
@@ -41,10 +58,14 @@ function loadSettings(){
         points = p;
         currentPoint = points.length - 1;
 
+        override_values = json.override.channels.values.map(function(c){ return {value: c}; });
+        document.getElementById('channels_override').checked = json.override.channels.enabled;
+
         configCache = buildSave()
 
         rebuildPlot()
-        updatePointInfo()
+        updatePointInfo();
+        updateOverrideValues();
 
         saveSettings()
     })
@@ -67,8 +88,14 @@ function buildSave(){
     var obj = {
         ssid: document.getElementById('ssid').value,
         password: document.getElementById('password').value,
-        levels: levels
-    }
+        levels: levels,
+        override: {
+            channels: {
+                enabled: document.getElementById('channels_override').checked,
+                values: override_values.map(function(x){ return x.value; })
+            }
+        }
+    };
 
     return obj;
 }
@@ -76,7 +103,7 @@ function buildSave(){
 function saveSettings(){
     var n = buildSave();
 
-    if( n != configCache) {
+    if( JSON.stringify(n) != JSON.stringify(configCache)) {
         var m = JSON.parse(JSON.stringify(n));
     
         var now = new Date();
@@ -99,11 +126,28 @@ function saveSettings(){
     }
 }
 
+function loadReport()
+{
+    d3.json('/status', function(error, json){
+        if(!error) {
+            status_report.temperature = json.temperature;
+            status_report.channels = json.channels.map(function(c){ return {value: c}; });
+
+            d3.select('#temperature').text(status_report.temperature);
+            updateOverrideValues();
+        }
+
+        setTimeout(loadReport, 1000)
+    })
+}
+
+loadReport()
+
 
 var svg = d3.select("svg.timePlot"),
     margin = {top: 20, right: 100, bottom: 30, left: 50},
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom;
+    width = +svg.node().viewBox.baseVal.width - margin.left - margin.right,
+    height = +svg.node().viewBox.baseVal.height - margin.top - margin.bottom;
 
 
 var points = [
@@ -121,6 +165,7 @@ var points = [
     }
 ];
 
+var override_values = [{value:0},{value:0},{value:0},{value:0},{value:0}];
 
 var x = d3.scaleTime()
     .domain([new Date(2000, 0, 1,  0), new Date(2000, 0, 2,  0, 0)])
@@ -246,7 +291,7 @@ function dragged(d) {
             if (newTime>= points[d.id+1].time) newTime = points[d.id+1].time-1
         }
 
-        d.time = newTime;
+        //d.time = newTime;
         d.power = newPower;
 
 
@@ -273,8 +318,7 @@ function addPoint(time){
 
     for(var i=0; i<points.length; ++i) {
         if(points[i].time === time) {
-            time++;
-            continue;
+            break
         }
         if(points[i].time > time){
             points.splice(i, 0, { time: time, power: 50, channels: Array(maxChannel).fill(1).map(function(){ return { value:50 }}) } )
@@ -388,6 +432,89 @@ function buildPointInfoPlot() {
 
 buildPointInfoPlot();
 
+var updateOverrideValues;
+
+function buildOverrideChannels()
+{
+    var svg = d3.select("svg.override_values")
+
+    var margin = {top: 20, right: 20, bottom: 20, left: 50},
+        width = +svg.attr("width") - margin.left - margin.right,
+        height = +svg.attr("height") - margin.top - margin.bottom;
+
+
+    var focus = svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var powerScale = d3.scaleLinear()
+        .domain([0, maxPower])
+        .rangeRound([height, 0]);
+
+    var powerAxis = d3.axisLeft(powerScale);
+
+    focus.append("g").call(powerAxis)
+
+    var loScale = d3.scaleLinear()
+        .domain([0, maxChannel])
+        .rangeRound([0, width])
+
+    updateOverrideValues = function(){
+
+        //focus.selectAll("line").remove();
+        //focus.selectAll("circle").remove();
+
+        var editable = document.getElementById('channels_override').checked;
+
+        var l = focus.selectAll("line.vert")
+            .data(status_report.channels)
+
+        l
+            .enter()
+            .append("line")
+            .classed("vert", true)
+            //.attr("stroke-dasharray", "5,5")
+            .attr("stroke", "#0f8010")
+            .attr("x1", function(d,i){ return loScale(i+1) })
+            .attr("y1", powerScale(0))
+            .attr("x2", function(d,i){ return loScale(i+1) })
+            .merge(l)
+            .attr("y2", function(d){ return powerScale(d.value) });
+
+        //l.attr("stroke", editable?"#0074D9":"#0f8010");
+
+        var c = focus.selectAll("circle.vert")
+            .data(override_values)
+
+        c
+            .enter()
+            .append("circle")
+            .classed("vert", true)
+            .attr("cx", function(d,i){ return loScale(i+1) })
+            .attr("r", 5)
+            .style('fill', 'steelblue')
+            .call(d3.drag()
+                .on('drag', function(d){
+                    var newPower = powerScale.invert(d3.event.y);
+                    if(newPower<0) newPower = 0;
+                    if(newPower>maxPower) newPower = maxPower;
+
+                    d.value = newPower
+
+                    updateOverrideValues();
+                })
+            )
+            .merge(c)
+            .attr("cy", function(d){ return powerScale(d.value) })
+
+        c.attr("display", editable?'':'none');
+
+        //.attr("cy", function(d){ return powerScale(d.value) })
+    }
+
+    updateOverrideValues()
+}
+
+buildOverrideChannels();
 
 loadSettings()
 

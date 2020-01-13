@@ -19,7 +19,10 @@ function loadSettings()
             dec:write(str)
         end
 
-        settings = dec:result()
+        local new = dec:result()
+        for k,v in pairs(new) do
+            settings[k] = v
+        end
        
         file.close()
     end

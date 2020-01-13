@@ -26,5 +26,11 @@ namespace RTC
     bool foo,bar;
     return Clock.getMinute() + Clock.getHour(foo,bar)*60;
   }
+  
+  int getSeconds()
+  {
+    bool foo,bar;
+    return Clock.getSecond() + Clock.getMinute()*60 + Clock.getHour(foo,bar)*60*60;
+  }
 
 }

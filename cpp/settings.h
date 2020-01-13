@@ -1,10 +1,11 @@
 #pragma once
 #include <WString.h>
 #include <vector>
+#include <array>
 
 namespace Settings 
 {
-  const int channelsCount = 5;
+  constexpr int channelsCount = 5;
 
   struct powerPoint {
     int time;
@@ -25,5 +26,7 @@ namespace Settings
 
   std::vector<powerPoint> getLevels();
 
-  
+  bool isOverrideChannels();
+  std::array<int, channelsCount> getOverrideChannels();
+
 }
