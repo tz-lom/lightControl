@@ -5,7 +5,7 @@
 namespace Status
 {
 
-using callbackType = std::function<void(JsonObject &root)>;
+using callbackType = std::function<void(JsonObject root)>;
 
 void registerStatusReporter(callbackType callback);
 

@@ -12,12 +12,21 @@ namespace Settings
     int power;
     int channels[channelsCount];
   };
+
+  struct PID {
+    float x0;
+    float p;
+    float i;
+    float d;
+  };
   
   void setup();
   
   bool isWiFiAPmode();
   String getSSID();
   String getPassword();
+
+  PID getPID();
 
   void save();
 

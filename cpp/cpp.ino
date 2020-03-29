@@ -4,8 +4,10 @@
 #include "rtc.h"
 #include "termometer.h"
 #include "lightcontrol.h"
+#include "cooler.hpp"
 #include <FS.h>
 #include <Wire.h>
+#include <array>
 
 void initializeAP()
 {
@@ -36,6 +38,7 @@ void setup()
   Termometer::setup();
   WebServer::setup();
   LightControl::setup();
+  Cooler::setup();
 
 
 
@@ -68,9 +71,49 @@ void setup()
   }
 }
 
+struct TaskDefinition
+{
+  const std::function<void()> callback;
+  const unsigned long timeout;
+  unsigned long passed;
+
+  TaskDefinition(std::function<void()> callback, unsigned long timeout):
+    callback(callback), timeout(timeout), passed(0) {}
+
+  void loop(unsigned long _passed)
+  {
+    passed += _passed;
+    if(timeout < passed)
+    {
+      passed = 0;
+      callback();
+    }
+  }
+};
+
+std::array<TaskDefinition, 4> tasks ={
+  TaskDefinition{&WebServer::loop, WebServer::schedulerTimeout}, 
+  TaskDefinition{&LightControl::loop, LightControl::schedulerTimeout}, 
+  TaskDefinition{[](){Termometer::loop(); Cooler::loop(); }, Termometer::schedulerTimeout},
+  TaskDefinition{&RTC::loop, RTC::schedulerTimeout}
+  };
+
 void loop()
 {
-  WebServer::loop();
-  LightControl::loop();
-  Termometer::loop();
+  const auto now = millis();
+  static auto prev = now;
+
+  const auto passed = now>=prev?now-prev:now;
+  prev = now;
+  
+//  Serial.print(prev);
+//  Serial.print(' ');
+//  Serial.print(now);
+//  Serial.print(' ');
+//  Serial.println(passed);
+
+  for(auto &task: tasks)
+  {
+    task.loop(passed);
+  }
 }

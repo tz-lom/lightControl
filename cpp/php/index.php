@@ -2,12 +2,15 @@
 
 switch($_SERVER["REQUEST_URI"])
 {
+case '/':
+    echo file_get_contents('index.htm');
+    break;
 case '/settings/save':
     file_put_contents('settings.json', file_get_contents('php://input'));
     echo 'saved';
     break;
 case '/settings':
-    $settings = json_encode([
+    $settings = '{}'; /*json_encode([
       'ssid' => 'foo',
       'password' => 'bar',
       'maxChannel' => 5,
@@ -24,7 +27,7 @@ case '/settings':
           ]
         ]
       ]
-    ]);
+    ]);     */
     $x = @file_get_contents('settings.json');
     if($x) $settings = $x;
     echo $settings;

@@ -13,15 +13,15 @@ void registerStatusReporter(callbackType callback)
 
 String getStatus()
 {
-  StaticJsonBuffer<2048> jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
+  StaticJsonDocument<512> jsonDocument;
+  JsonObject root = jsonDocument.to<JsonObject>();
 
   for(auto &callback: reporters)
   {
     callback(root);
   }
   String json;
-  root.printTo(json);
+  serializeJson(jsonDocument, json);
   return json;
 }
 
